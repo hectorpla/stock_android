@@ -1,10 +1,12 @@
 package com.zhanpenl.stockquote;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
@@ -42,6 +44,31 @@ public class MainActivity extends AppCompatActivity {
         getButton = (Button) findViewById(R.id.btn_get);
         clearButton = (Button) findViewById(R.id.btn_clear);
 
+        getButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String symbol = autoTex.getText().toString().split(" ")[0];
+                Intent i = new Intent(getApplicationContext(), StockActivity.class);
+
+                if (symbol.length() == 0) {
+                    Toast.makeText(getApplicationContext(), "Please enter a symbol",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // temporary
+                i.putExtra("symbol", symbol);
+                startActivity(i);
+            }
+        });
+
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                autoTex.setText("");
+            }
+        });
+
         autoTex = (AutoCompleteTextView) findViewById(R.id.autocomp_text);
         autoTex.addTextChangedListener(new TextWatcher() {
             @Override
@@ -62,6 +89,7 @@ public class MainActivity extends AppCompatActivity {
                                 List<String> listing = new LinkedList<>();
                                 try {
                                     for (int i = 0; i < response.length(); i++) {
+                                        if (i >= 5) break;
                                         JSONObject item = response.getJSONObject(i);
                                         String symbol = item.getString("Symbol");
                                         String name = item.getString("Name");
@@ -98,5 +126,6 @@ public class MainActivity extends AppCompatActivity {
                 // show refresh icon
             }
         });
+        autoTex.setThreshold(1);
     }
 }
