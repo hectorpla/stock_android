@@ -26,7 +26,9 @@ import com.android.volley.toolbox.Volley;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class StockActivity extends AppCompatActivity {
@@ -34,6 +36,11 @@ public class StockActivity extends AppCompatActivity {
     public String symbol = null;
     private JSONObject plotObject;
     private Map<String, JSONObject> indPlotObjects;
+    private List<String> dates;
+    private List<Integer> UTCDates;
+    private final int INDICATOR_LENGTH = 128;
+    private final int HIST_LENGTH = 1000;
+
     RequestQueue requestQueue;
 
     /**
@@ -146,21 +153,28 @@ public class StockActivity extends AppCompatActivity {
             // Show 3 total pages.
             return 3;
         }
+    }
 
-        /* seems not like to work */
-//        @Override
-//        public CharSequence getPageTitle(int position) {
-//            Log.d("StockActivity", "getPageTitle: " + position);
-//            switch (position) {
-//                case 0:
-//                    return "CURRENT";
-//                case 1:
-//                    return "HISTORICAL";
-//                case 2:
-//                    return "NEWS";
-//                default:
-//                    return "default";
-//            }
-//        }
+    public List<String> getDates() {
+        return new ArrayList<>(dates);
+    }
+
+    public void setDates(List<String> rowDates) {
+        int sz = Math.min(rowDates.size(), INDICATOR_LENGTH);
+        dates = rowDates.subList(0, sz);
+    }
+
+    public JSONObject getPricePlotObject() {
+        return plotObject;
+    }
+
+    public void setPricePlotObject(JSONObject obj) {
+        plotObject = obj;
+    }
+
+    public JSONObject getIndPlotObject(String indicator) {
+        if (!indPlotObjects.containsKey(indicator)) { return null; }
+        // TODO: might want to return a copy
+        return indPlotObjects.get(indicator);
     }
 }

@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 // temporary
-                i.putExtra("symbol", symbol);
+                i.putExtra("symbol", symbol.toUpperCase());
                 startActivity(i);
             }
         });
@@ -79,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onTextChanged(CharSequence text, int i, int i1, int i2) {
+                // TODO: check bug -> only refresh list when deleting characters
                 // hide refresh icon
                 if (text.length() == 0) { return; }
                 String url = makitonURL + text.toString();
