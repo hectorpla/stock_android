@@ -67,8 +67,8 @@ public class NewsFeedFrag extends Fragment {
             final String[] news = newsList.get(i); // final makes it accessable from callback
 
             titleView.setText(news[0]);
-            authorView.setText(news[2]);
-            dateView.setText(news[3]);
+            authorView.setText("Author: " + news[2]);
+            dateView.setText("Date: " + news[3]);
 
 
             // TODO: add onclick for the entire view
@@ -123,11 +123,11 @@ public class NewsFeedFrag extends Fragment {
                             }
                         }
                         catch (JSONException e) {
-                            Log.d("NEWS", "onResponse: " + e.toString());
                             errorView.setText(e.toString());
                         }
-                        if (newsArray.size() > 0) {
-                            Log.d("NEWS", "onResponse: " + newsArray.get(0).toString());
+                        if (newsArray.size() == 0) {
+                            errorView.setText("can't load data");
+                            return;
                         }
                         NewsAdapter newsAdapter = new NewsAdapter(newsArray);
                         newsListView.setAdapter(newsAdapter);

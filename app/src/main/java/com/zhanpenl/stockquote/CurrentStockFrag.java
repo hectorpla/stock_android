@@ -1,6 +1,7 @@
 package com.zhanpenl.stockquote;
 
 import android.content.Context;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -10,11 +11,15 @@ import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -39,20 +44,24 @@ public class CurrentStockFrag extends Fragment {
     private ListView infoTabView;
     private TextView errorText;
     private ProgressBar progressBar;
-    private WebView webView;
-    private ScrollView scrollView;
 
     private String symbol;
     private String indicator = "Price";
+    private String showedIndicator = "Price";
 
-    private final String[] indicators = {"SMA", "EMA", "STOCH", "RSI", "ADX", "CCI",
-            "BBANDS", "MACD"};
+    private String[] indicators;
 
     private JSONObject sharePlotObject;
 
 
     class InfoAdapter extends BaseAdapter {
         private List<String[]> infoPairs;
+        private final int TYPE_TABROW = 0;
+        private final int TYPE_CHART = 1;
+
+        private Spinner spinner;
+        private TextView changeButtonView;
+        private WebView webView;
 
         InfoAdapter(List<String[]> infoList) {
             infoPairs = infoList;
@@ -60,12 +69,12 @@ public class CurrentStockFrag extends Fragment {
 
         @Override
         public int getCount() {
-            return infoPairs.size();
+            return infoPairs.size() + 1;
         }
 
         @Override
         public Object getItem(int i) {
-            return null;
+            return infoPairs.get(i);
         }
 
         @Override
@@ -74,11 +83,66 @@ public class CurrentStockFrag extends Fragment {
         }
 
         @Override
+        public int getViewTypeCount() {
+            return 2;
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            return position >= infoPairs.size() ? TYPE_CHART : TYPE_TABROW;
+        }
+
+        @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
-            view = getLayoutInflater().inflate(R.layout.inforowlayout, null);
-            TextView fieldNameView = (TextView) view.findViewById(R.id.form_head);
-            TextView fieldDataView = (TextView) view.findViewById(R.id.form_data);
-            ImageView arrowView = (ImageView) view.findViewById(R.id.image_form_arrow);
+            int type = getItemViewType(i);
+
+            if (type == TYPE_CHART) {
+                indicators = getResources().getStringArray(R.array.indicator_names);
+
+                view = getLayoutInflater().inflate(R.layout.indicatorchartlayout, null);
+                spinner = view.findViewById(R.id.spinner_indicators);
+                changeButtonView = view.findViewById(R.id.btn_changeIndicator);
+                webView = view.findViewById(R.id.webview_indicator);
+
+                ArrayAdapter<String> indicatorAdapter = new ArrayAdapter<String>(getActivity(),
+                        android.R.layout.simple_dropdown_item_1line, indicators);
+                spinner.setAdapter(indicatorAdapter);
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                        indicator = indicators[i];
+                        Log.d(getResources().getString(R.string.curTag), "onItemSelected: " +
+                            indicator);
+                        changeButtonView.setEnabled(indicator != showedIndicator);
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> adapterView) {
+                        // do nothing
+                    }
+                });
+                changeButtonView.setEnabled(false);
+                changeButtonView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        // TODO: loadURL, ansync, on success do the next line
+                        showedIndicator = indicator;
+                        changeButtonView.setEnabled(false);
+                    }
+                });
+
+                initWebView();
+                webView.loadUrl("file:///android_asset/indicator.html");
+                return view;
+            }
+
+            // table row case
+            if (view == null) {
+                view = getLayoutInflater().inflate(R.layout.inforowlayout, null);
+            }
+            TextView fieldNameView = view.findViewById(R.id.form_head);
+            TextView fieldDataView = view.findViewById(R.id.form_data);
+            ImageView arrowView = view.findViewById(R.id.image_form_arrow);
             String[] pair = infoPairs.get(i);
 
             fieldNameView.setText(pair[0]);
@@ -92,7 +156,19 @@ public class CurrentStockFrag extends Fragment {
                 }
             }
             else { arrowView.setVisibility(view.GONE); }
+
+            // styling
+            fieldNameView.setTypeface(Typeface.DEFAULT_BOLD);
             return view;
+        }
+
+        private void initWebView() {
+            webView.setWebViewClient(new WebViewClient());
+            WebSettings webSettings = webView.getSettings();
+            webSettings.setDomStorageEnabled(true);
+            webSettings.setJavaScriptEnabled(true);
+            webView.addJavascriptInterface(new WebAppInterface(CurrentStockFrag.this.stockActivity),
+                    "Android");
         }
     }
 
@@ -156,19 +232,14 @@ public class CurrentStockFrag extends Fragment {
         symbol = stockActivity.symbol;
 
         View view = inflater.inflate(R.layout.current_stock_frag, container, false);
-        scrollView = (ScrollView) view.findViewById(R.id.scroll_current);
-        progressBar = (ProgressBar) view.findViewById(R.id.progressBar_current);
-        infoTabView = (ListView) view.findViewById(R.id.info_tab);
-        webView = (WebView) view.findViewById(R.id.webview_indicator);
-        errorText = (TextView) view.findViewById(R.id.errMsg_current);
+        progressBar = view.findViewById(R.id.progressBar_current);
+        infoTabView = view.findViewById(R.id.info_tab);
+        errorText = view.findViewById(R.id.errMsg_current);
 
-//        scrollView.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.VISIBLE);
 
         // load table and chart
         loadInfoTable();
-
-        initWebView();
 
         return view;
     }
@@ -184,23 +255,23 @@ public class CurrentStockFrag extends Fragment {
                             "Open", "prevPrice", "Day's Range", "Volume"};
                         List<String[]> rows = new ArrayList<>();
 
+                        // set the obj obtained from the back-end
+                        stockActivity.setPricePlotObject(response);
                         try {
                             for (String field : fields) {
                                 String data = response.getString(field);
                                 rows.add(new String[] {field, data});
                             }
-                            // TODO: get series data
-
                         }
                         catch (JSONException e) {
                             errorText.setText(e.toString());
                             return;
                         }
 
+                        progressBar.setVisibility(View.GONE);
+
                         InfoAdapter infoAdapter = new InfoAdapter(rows);
                         infoTabView.setAdapter(infoAdapter);
-                        progressBar.setVisibility(View.GONE);
-//                        scrollView.setVisibility(View.VISIBLE);
                     }
                 },
                 new Response.ErrorListener() {
@@ -212,10 +283,5 @@ public class CurrentStockFrag extends Fragment {
                     }
                 });
         stockActivity.requestQueue.add(request);
-    }
-
-    private void initWebView() {
-        WebSettings webSettings = webView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
     }
 }

@@ -14,14 +14,18 @@
 
 
     <LinearLayout
+        android:id="@+id/linear_current"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:isScrollContainer="true">
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:layout_marginHorizontal="10dp">
             <TextView
+                style="@style/TextAppearance.AppCompat.Title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Stock Details"/>
@@ -30,7 +34,7 @@
                 android:id="@+id/toggle_fav"
                 android:layout_width="25dp"
                 android:layout_height="25dp"
-                android:contentDescription="favarite button"
+                android:contentDescription="favarite_button"
                 android:layout_gravity="end"
                 android:src="@android:drawable/star_big_off" />
 
@@ -45,12 +49,10 @@
         </LinearLayout>
         <ListView
             android:id="@+id/info_tab"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <WebView
-            android:id="@+id/webview_indicator"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"></WebView>
+            android:layout_height="2000dp"
+            android:scrollbars="vertical"/>
+
     </LinearLayout>
 
     <android.support.v7.widget.AppCompatTextView
@@ -61,9 +63,10 @@
 
     <ProgressBar
         android:id="@+id/progressBar_current"
-        style="?android:attr/progressBarStyleLarge"
+        style="@style/Base.Widget.AppCompat.ProgressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:progressDrawable="@drawable/circular_progress_view"
         app:layout_constraintGuide_percent="0.5" />
+
 </android.support.constraint.ConstraintLayout>
