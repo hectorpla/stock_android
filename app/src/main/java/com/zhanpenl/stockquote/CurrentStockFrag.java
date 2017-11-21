@@ -155,7 +155,7 @@ public class CurrentStockFrag extends Fragment {
                     arrowView.setImageResource(R.drawable.down);
                 }
             }
-            else { arrowView.setVisibility(view.GONE); }
+            else { arrowView.setVisibility(View.GONE); }
 
             // styling
             fieldNameView.setTypeface(Typeface.DEFAULT_BOLD);
@@ -168,14 +168,39 @@ public class CurrentStockFrag extends Fragment {
             webSettings.setDomStorageEnabled(true);
             webSettings.setJavaScriptEnabled(true);
             webView.addJavascriptInterface(new WebAppInterface(CurrentStockFrag.this.stockActivity),
-                    "Android");
+                    "CurrentStock");
+        }
+
+        // change indicator
+        private void getIndicatorInfo(String indicator) {
+            String url =
+                    "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/indicatorQuery.php?symbol="
+                    + symbol + "?indicator=" + indicator;
+
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
+                    new Response.Listener<JSONObject>() {
+                        @Override
+                        public void onResponse(JSONObject response) {
+
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+
+                        }
+                    }
+            );
+
+            stockActivity.requestQueue.add(request);
         }
     }
 
     class WebAppInterface {
         Context mContext;
 
-        WebAppInterface(Context c) { mContext = c; }
+        public WebAppInterface(Context c) { mContext = c; }
 
         @JavascriptInterface
         public String getSymbol() {
@@ -223,6 +248,26 @@ public class CurrentStockFrag extends Fragment {
         public String getSharePlotObject(String indicator) {
             JSONObject obj = CurrentStockFrag.this.stockActivity.getIndPlotObject(indicator);
             return obj.toString();
+        }
+
+        @JavascriptInterface
+        public String getIndPlotObject(String indicator) {
+            return stockActivity.getIndPlotObject(indicator).toString();
+        }
+
+        @JavascriptInterface
+        public void putIndPlotObject(String indicator, String objString) {
+            JSONParser parser = new JSONParser();
+            JSONObject obj = null;
+
+            try {
+                obj = (JSONObject) parser.parse(objString);
+            }
+            catch (ParseException e) {
+                Log.d("Error", "putIndPlotObject: wrong json format");
+                return;
+            }
+            stockActivity.putIndPlotObject(indicator, obj);
         }
     }
 
@@ -277,7 +322,7 @@ public class CurrentStockFrag extends Fragment {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        errorText.setText("can't load data");
+                        errorText.setText(getResources().getString(R.string.cantLoadMsg));
                         progressBar.setVisibility(View.GONE);
                         errorText.setVisibility(View.VISIBLE);
                     }

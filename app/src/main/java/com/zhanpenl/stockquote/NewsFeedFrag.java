@@ -3,7 +3,6 @@ package com.zhanpenl.stockquote;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -60,15 +59,17 @@ public class NewsFeedFrag extends Fragment {
 
         @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
-            view = getLayoutInflater().inflate(R.layout.newsrowlayout, null);
-            TextView titleView = (TextView) view.findViewById(R.id.news_title);
-            TextView authorView = (TextView) view.findViewById(R.id.news_author);
-            TextView dateView = (TextView) view.findViewById(R.id.news_date);
+            if (view == null) {
+                view = getLayoutInflater().inflate(R.layout.newsrowlayout, null);
+            }
+            TextView titleView = view.findViewById(R.id.news_title);
+            TextView authorView = view.findViewById(R.id.news_author);
+            TextView dateView = view.findViewById(R.id.news_date);
             final String[] news = newsList.get(i); // final makes it accessable from callback
 
             titleView.setText(news[0]);
-            authorView.setText("Author: " + news[2]);
-            dateView.setText("Date: " + news[3]);
+            authorView.setText(getResources().getString(R.string.newsAuthor, news[2]));
+            dateView.setText(getResources().getString(R.string.newsDate, news[3]));
 
 
             // TODO: add onclick for the entire view
@@ -91,12 +92,13 @@ public class NewsFeedFrag extends Fragment {
         stockActvity = (StockActivity) getActivity();
         symbol = stockActvity.symbol;
 
-        newsListView = (ListView) view.findViewById(R.id.news_list);
-        errorView = (TextView) view.findViewById(R.id.errMsg_news);
+        newsListView = view.findViewById(R.id.news_list);
+        errorView = view.findViewById(R.id.errMsg_news);
 
         // load news
         loadNews();
 
+        Log.d("NEWS", "NEWS onCreateView: ++++++++++++++++++++++++++++++++++++++");
         return view;
     }
 
@@ -126,7 +128,7 @@ public class NewsFeedFrag extends Fragment {
                             errorView.setText(e.toString());
                         }
                         if (newsArray.size() == 0) {
-                            errorView.setText("can't load data");
+                            errorView.setText(getResources().getString(R.string.cantLoadMsg));
                             return;
                         }
                         NewsAdapter newsAdapter = new NewsAdapter(newsArray);
@@ -136,7 +138,7 @@ public class NewsFeedFrag extends Fragment {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        errorView.setText("can't load data");
+                        errorView.setText(getResources().getString(R.string.cantLoadMsg));
                     }
                 }
         );

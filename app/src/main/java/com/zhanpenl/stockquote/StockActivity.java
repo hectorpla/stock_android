@@ -78,14 +78,8 @@ public class StockActivity extends AppCompatActivity {
         mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
         tabLayout.addOnTabSelectedListener(new TabLayout.ViewPagerOnTabSelectedListener(mViewPager));
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+        // retain pages
+        mViewPager.setOffscreenPageLimit(2);
 
         // back button
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -176,5 +170,9 @@ public class StockActivity extends AppCompatActivity {
         if (!indPlotObjects.containsKey(indicator)) { return null; }
         // TODO: might want to return a copy
         return indPlotObjects.get(indicator);
+    }
+
+    public void putIndPlotObject(String indicator, JSONObject obj) {
+        indPlotObjects.put(indicator, obj);
     }
 }
