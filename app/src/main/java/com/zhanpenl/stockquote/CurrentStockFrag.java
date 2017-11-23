@@ -34,6 +34,7 @@ import org.json.JSONTokener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by hectorlueng on 11/17/17.
@@ -51,8 +52,8 @@ public class CurrentStockFrag extends Fragment {
     private SharedPreferences sharedPref;
 
     private String symbol;
-    private String indicator = "Price";
-    private String indicatorOnSpinner = "Price";
+    private int indicatorIndex = 0;
+    private int indicatorIndexOnSpinner = 0;
     private String showedIndicator = "Price";
 
     private String[] indicators;
@@ -111,20 +112,14 @@ public class CurrentStockFrag extends Fragment {
                 changeButtonView = view.findViewById(R.id.btn_changeIndicator);
                 webView = view.findViewById(R.id.webview_indicator);
 
-                ArrayAdapter<String> indicatorAdapter = new ArrayAdapter<String>(getActivity(),
+                final ArrayAdapter<String> indicatorAdapter = new ArrayAdapter<String>(getActivity(),
                         android.R.layout.simple_dropdown_item_1line, indicators);
                 spinner.setAdapter(indicatorAdapter);
                 spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                        indicatorOnSpinner = indicators[i];
-                        Log.d("CURR_STOCK", "onItemSelected: changed to " + indicatorOnSpinner
-                            + ", showed Indicator is " + showedIndicator + ", they are equal? "
-                            + indicatorOnSpinner.equals(showedIndicator));
-                        changeButtonView.setEnabled(true);
-                        if (showedIndicator.equals(indicatorOnSpinner)) {
-                            changeButtonView.setEnabled(false);
-                        }
+                        indicatorIndexOnSpinner = i;
+                        changeButtonView.setEnabled(indicatorIndexOnSpinner != indicatorIndex);
                     }
 
                     @Override
@@ -132,13 +127,16 @@ public class CurrentStockFrag extends Fragment {
                         // do nothing
                     }
                 });
+                // TODO: set previous selected category
+                spinner.setSelection(indicatorIndex);
+
                 changeButtonView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         // TODO: loadURL, ansync, on success do the next line
                         Log.d("CURR_STOCK", "changeButtonView onClick: should reload page");
-                        indicator = indicatorOnSpinner;
-                        notifyDataSetChanged();
+                        indicatorIndex = indicatorIndexOnSpinner;
+                        notifyDataSetChanged(); // key
                     }
                 });
 
@@ -219,7 +217,7 @@ public class CurrentStockFrag extends Fragment {
 
         @JavascriptInterface
         public String getIndicator() {
-            return indicator;
+            return indicators[indicatorIndex];
         }
 
         @JavascriptInterface
@@ -250,7 +248,7 @@ public class CurrentStockFrag extends Fragment {
             }
             stockActivity.putExportObject(indicator, obj);
             // should put here?
-//            shareExportObject = obj;
+            shareExportObject = obj;
         }
 
         @JavascriptInterface
@@ -296,6 +294,7 @@ public class CurrentStockFrag extends Fragment {
                 SharedPreferences.Editor editor = sharedPref.edit();
                 if (sharedPref.contains(symbol)) {
                     editor.remove(symbol);
+                    editor.commit();
                     Log.d("FavToggle", "onClick: removed " + symbol);
                     favToggle.setImageResource(R.drawable.empty);
                 }
@@ -310,7 +309,9 @@ public class CurrentStockFrag extends Fragment {
                             storedObj.put("change", infoObj.getString(("Change")));
                             storedObj.put("orderTag", sharedPref.getAll().size());
                             editor.putString(symbol, storedObj.toString());
+                            editor.commit(); // forgot to commit
                             favToggle.setImageResource(R.drawable.filled);
+
                             Log.d("FAV_LIST", "add item: " + storedObj.toString());
                         }
                         catch (JSONException e) {
@@ -323,7 +324,9 @@ public class CurrentStockFrag extends Fragment {
     }
 
     private void loadInfoTable() {
-        String url = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/stockQuote.php?symbol=" + symbol;
+        // http://zhpnl-web571.us-west-1.elasticbeanstalk.com
+        String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?symbol=";
+        url += symbol;
         Log.d("CURRENT", "loadInfoTable: " + url);
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,

@@ -20,6 +20,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -37,9 +38,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
     AutoCompleteTextView autoTex;
@@ -50,13 +54,17 @@ public class MainActivity extends AppCompatActivity {
     Spinner catSpinner;
     Spinner ascDescSpinner;
     ListView favListView;
+    ProgressBar progressBar;
 
 
     SharedPreferences sharedPref;
     String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
 
-    int sortType = 1;
+    int sortType = 0;
+    boolean isSortAsc = true;
     ArrayAdapter<JSONObject> favListAdapter;
+
+    List<Comparator<JSONObject>> comparators;
 
     RequestQueue requestQueue;
 
@@ -72,7 +80,11 @@ public class MainActivity extends AppCompatActivity {
         catSpinner = findViewById(R.id.spinner_cat);
         ascDescSpinner = findViewById(R.id.spinner_asc_desc);
         favListView = findViewById(R.id.list_fav);
+        progressBar = findViewById(R.id.progressBar_main);
 
+        Log.d("MAIN_ACTIVITY", "onCreate: >>>>>>>>>>>>>>>>>>>>>>");
+
+        setComparators();
         // favorite list
         sharedPref = getSharedPreferences(getString(R.string.sharePrefKey),
                 Context.MODE_PRIVATE);
@@ -85,46 +97,56 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 TextView symbolText = convertView.findViewById(R.id.fav_symbol);
-                TextView priceText = convertView.findViewById(R.id.fav_change);
+                TextView priceText = convertView.findViewById(R.id.fav_price);
                 TextView changeText = convertView.findViewById(R.id.fav_change);
-                ImageView arrowView = convertView.findViewById(R.id.image_favList_arrow);
                 JSONObject favItem = getItem(position);
+                final String symbol;
 
                 try {
-                    symbolText.setText(favItem.getString("symbol"));
+                    symbol = favItem.getString("symbol");
+                    symbolText.setText(symbol);
                     priceText.setText(favItem.getString("price"));
 
                     String change = favItem.getString("change");
                     changeText.setText(change);
                     if (Float.parseFloat(change.split(" ")[0]) >= 0) {
-                        arrowView.setImageResource(R.drawable.up);
+                        changeText.setTextColor(Color.GREEN);
                     }
                     else {
-                        arrowView.setImageResource(R.drawable.down);
+                        changeText.setTextColor(Color.RED);
                     }
                 }
                 catch (JSONException e) {
                     Log.d("FAV_LIST_ERR", "favAdapter getView: " + e.toString());
+                    return null;
                 }
+                convertView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        startStockActivity(symbol);
+                    }
+                });
                 return convertView;
             }
         };
-        favListAdapter.setNotifyOnChange(true);
+
+        Log.d("FAV_LIST_TRAVERSE", "sharedPref size: " + sharedPref.getAll().size());
         for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
             try {
                 JSONObject favListObj =
                         (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
-//                favListObj.put("symbol", entry.getKey());
+                Log.d("FAV_LIST_TRAVERSE", favListObj.toString());
                 favListAdapter.add(favListObj);
             }
             catch (JSONException e) {
                 Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
             }
         }
+        favListAdapter.setNotifyOnChange(true);
         favListView.setAdapter(favListAdapter);
 
         // sort type Spinner
-        ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
+        final ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_dropdown_item,
                 getResources().getStringArray(R.array.sort_categories)) {
             @Override
@@ -136,7 +158,8 @@ public class MainActivity extends AppCompatActivity {
             public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 TextView myView = (TextView) super.getDropDownView(position, convertView, parent);
                 if (!isEnabled(position)) { myView.setTextColor(Color.GRAY); }
-                else { myView.setTextColor(Color.BLACK); }return myView;
+                else { myView.setTextColor(Color.BLACK); }
+                return myView;
             }
         };
         catSpinner.setAdapter(sortCatAdapter);
@@ -144,6 +167,36 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 sortType = i;
+                // sort, may be not good to put here
+                sortFavList();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {}
+        });
+        ArrayAdapter<String> sortOrderAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_dropdown_item,
+                getResources().getStringArray(R.array.sort_order)) {
+            @Override
+            public boolean isEnabled(int position) {
+                return !(position == 0 || (position == 1 && isSortAsc)
+                        || (position == 2 && !isSortAsc));
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                TextView myView = (TextView) super.getDropDownView(position, convertView, parent);
+                if (!isEnabled(position)) { myView.setTextColor(Color.GRAY); }
+                else { myView.setTextColor(Color.BLACK); }
+                return myView;
+            }
+        };
+        ascDescSpinner.setAdapter(sortOrderAdapter);
+        ascDescSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                isSortAsc = i == 1;
+                sortFavList();
             }
 
             @Override
@@ -155,17 +208,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String symbol = autoTex.getText().toString().split(" ")[0];
-                Intent i = new Intent(getApplicationContext(), StockActivity.class);
-
-                if (symbol.length() == 0) {
-                    Toast.makeText(getApplicationContext(), "Please enter a symbol",
-                            Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // temporary
-                i.putExtra("symbol", symbol.toUpperCase());
-                startActivity(i);
+                startStockActivity(symbol);
             }
         });
 
@@ -176,12 +219,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //
-        autoTex = (AutoCompleteTextView) findViewById(R.id.autocomp_text);
+        // autocomplete
+        autoTex = findViewById(R.id.autocomp_text);
         autoTex.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                // pass
                 Log.d("auto", "beforeTextChanged: " + charSequence.toString());
             }
 
@@ -191,6 +233,8 @@ public class MainActivity extends AppCompatActivity {
                 // hide refresh icon
                 if (text.length() == 0) { return; }
                 String url = makitonURL + text.toString();
+
+                progressBar.setVisibility(View.VISIBLE);
                 JsonArrayRequest autoCompleteRequest = new JsonArrayRequest(Request.Method.GET, url,null,
                         new Response.Listener<JSONArray>() {
                             @Override
@@ -216,6 +260,7 @@ public class MainActivity extends AppCompatActivity {
                                     // pass
                                     Log.d("auto", "onTextChanged: failed");
                                 }
+                                progressBar.setVisibility(View.GONE);
                             }
                         },
                         new Response.ErrorListener() {
@@ -224,6 +269,7 @@ public class MainActivity extends AppCompatActivity {
                                 Log.d("auto", "onErrorResponse: cc");
                                 Toast.makeText(getApplicationContext(), "autocomplete failed",
                                         Toast.LENGTH_SHORT).show();
+                                progressBar.setVisibility(View.GONE);
                             }
                         }
                 );
@@ -238,7 +284,82 @@ public class MainActivity extends AppCompatActivity {
         autoTex.setThreshold(1);
     }
 
-    public void notifyFavChange() {
+    private void startStockActivity(String symbol) {
+        Intent i = new Intent(getApplicationContext(), StockActivity.class);
+        if (symbol.length() == 0) {
+            Toast.makeText(getApplicationContext(), "Please enter a symbol",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        i.putExtra("symbol", symbol.toUpperCase());
+        startActivity(i);
+    }
+
+    private void setComparators() {
+        comparators = new ArrayList<>();
+        comparators.add(new Comparator<JSONObject>() {
+            public int compare(JSONObject lhs, JSONObject rhs) {
+                try {
+                    return lhs.getInt("orderTag") - rhs.getInt("orderTag");
+                } catch (JSONException e) {
+                    Log.d("FAV_LIST_SORT", "compare: " + e.toString());
+                }
+                return 0;
+            }
+        });
+        comparators.add(new Comparator<JSONObject>() {
+            public int compare(JSONObject lhs, JSONObject rhs) {
+                try {
+                    return lhs.getString("symbol").compareTo(rhs.getString("symbol"));
+                }
+                catch (JSONException e) {
+                    Log.d("FAV_LIST_SORT", "compare: " + e.toString());
+                }
+                return 0;
+            }
+        });
+        comparators.add(new Comparator<JSONObject>() {
+            public int compare(JSONObject lhs, JSONObject rhs) {
+                try {
+                    Double doubleLhs = lhs.getDouble("price");
+                    Double doubleRhs = rhs.getDouble("price");
+                    if (doubleLhs > doubleRhs) return 1;
+                    if (doubleLhs < doubleRhs) return -1;
+                }
+                catch (JSONException e) {
+                    Log.d("FAV_LIST_SORT", "compare: " + e.toString());
+                }
+                return 0;
+            }
+        });
+        comparators.add(new Comparator<JSONObject>() {
+            public int compare(JSONObject lhs, JSONObject rhs) {
+                try {
+                    double changePerLhs = extractChangePer(lhs);
+                    double changePerRhs = extractChangePer(rhs);
+
+                    if (changePerLhs > changePerRhs) return 1;
+                    if (changePerLhs < changePerLhs) return -1;
+                }
+                catch (JSONException e) {
+                    Log.d("FAV_LIST_SORT", "compare: " + e.toString());
+                }
+                return 0;
+            }
+
+            private double extractChangePer(JSONObject obj) throws JSONException {
+                String str = obj.getString("change").split(" ")[1];
+                str = str.substring(1, str.length() - 2);
+                return Float.parseFloat(str);
+            }
+        });
+    }
+
+    private void sortFavList() {
+        Comparator<JSONObject> comp = comparators.get(Math.max(sortType - 1, 0));
+        if (!isSortAsc) { comp = comp.reversed(); }
+        favListAdapter.sort(comp);
         favListAdapter.notifyDataSetChanged();
     }
 }
