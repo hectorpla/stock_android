@@ -87,7 +87,7 @@ public class NewsFeedFrag extends Fragment {
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.news_frag, container, false);
+        View view = inflater.inflate(R.layout.frag_news, container, false);
 
         stockActvity = (StockActivity) getActivity();
         symbol = stockActvity.symbol;

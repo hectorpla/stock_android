@@ -1,15 +1,28 @@
 package com.zhanpenl.stockquote;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.Spinner;
+import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -22,15 +35,28 @@ import com.android.volley.toolbox.Volley;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     AutoCompleteTextView autoTex;
     Button getButton;
     Button clearButton;
+    ImageButton manRefresh;
+    Switch autoRefresh;
+    Spinner catSpinner;
+    Spinner ascDescSpinner;
+    ListView favListView;
+
+
+    SharedPreferences sharedPref;
     String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
+
+    int sortType = 1;
+    ArrayAdapter<JSONObject> favListAdapter;
 
     RequestQueue requestQueue;
 
@@ -41,9 +67,90 @@ public class MainActivity extends AppCompatActivity {
 
         requestQueue = Volley.newRequestQueue(this);
 
-        getButton = (Button) findViewById(R.id.btn_get);
-        clearButton = (Button) findViewById(R.id.btn_clear);
+        getButton = findViewById(R.id.btn_get);
+        clearButton = findViewById(R.id.btn_clear);
+        catSpinner = findViewById(R.id.spinner_cat);
+        ascDescSpinner = findViewById(R.id.spinner_asc_desc);
+        favListView = findViewById(R.id.list_fav);
 
+        // favorite list
+        sharedPref = getSharedPreferences(getString(R.string.sharePrefKey),
+                Context.MODE_PRIVATE);
+        favListAdapter = new ArrayAdapter<JSONObject>(this,
+                android.R.layout.simple_spinner_dropdown_item) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = getLayoutInflater().inflate(R.layout.favrowlayout, null);
+                }
+
+                TextView symbolText = convertView.findViewById(R.id.fav_symbol);
+                TextView priceText = convertView.findViewById(R.id.fav_change);
+                TextView changeText = convertView.findViewById(R.id.fav_change);
+                ImageView arrowView = convertView.findViewById(R.id.image_favList_arrow);
+                JSONObject favItem = getItem(position);
+
+                try {
+                    symbolText.setText(favItem.getString("symbol"));
+                    priceText.setText(favItem.getString("price"));
+
+                    String change = favItem.getString("change");
+                    changeText.setText(change);
+                    if (Float.parseFloat(change.split(" ")[0]) >= 0) {
+                        arrowView.setImageResource(R.drawable.up);
+                    }
+                    else {
+                        arrowView.setImageResource(R.drawable.down);
+                    }
+                }
+                catch (JSONException e) {
+                    Log.d("FAV_LIST_ERR", "favAdapter getView: " + e.toString());
+                }
+                return convertView;
+            }
+        };
+        favListAdapter.setNotifyOnChange(true);
+        for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
+            try {
+                JSONObject favListObj =
+                        (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
+//                favListObj.put("symbol", entry.getKey());
+                favListAdapter.add(favListObj);
+            }
+            catch (JSONException e) {
+                Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
+            }
+        }
+        favListView.setAdapter(favListAdapter);
+
+        // sort type Spinner
+        ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_dropdown_item,
+                getResources().getStringArray(R.array.sort_categories)) {
+            @Override
+            public boolean isEnabled(int position) {
+                return position != 0 && position != sortType;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView, ViewGroup parent) {
+                TextView myView = (TextView) super.getDropDownView(position, convertView, parent);
+                if (!isEnabled(position)) { myView.setTextColor(Color.GRAY); }
+                else { myView.setTextColor(Color.BLACK); }return myView;
+            }
+        };
+        catSpinner.setAdapter(sortCatAdapter);
+        catSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                sortType = i;
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {}
+        });
+
+        // connection to stock activity
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -69,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //
         autoTex = (AutoCompleteTextView) findViewById(R.id.autocomp_text);
         autoTex.addTextChangedListener(new TextWatcher() {
             @Override
@@ -128,5 +236,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         autoTex.setThreshold(1);
+    }
+
+    public void notifyFavChange() {
+        favListAdapter.notifyDataSetChanged();
     }
 }

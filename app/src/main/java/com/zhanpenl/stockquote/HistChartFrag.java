@@ -2,7 +2,6 @@ package com.zhanpenl.stockquote;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -27,7 +26,7 @@ public class HistChartFrag extends Fragment {
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.hist_stock_frag, container, false);
+        View view = inflater.inflate(R.layout.frag_hist_stock, container, false);
         stockActivity = (StockActivity) getActivity();
 
         webView = view.findViewById(R.id.webview_hist);

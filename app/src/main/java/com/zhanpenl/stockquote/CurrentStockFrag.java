@@ -1,6 +1,7 @@
 package com.zhanpenl.stockquote;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -18,9 +19,9 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -29,8 +30,7 @@ import com.android.volley.toolbox.JsonObjectRequest;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.simple.parser.ParseException;
-import org.json.simple.parser.JSONParser;
+import org.json.JSONTokener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,16 +42,22 @@ import java.util.List;
 public class CurrentStockFrag extends Fragment {
     private StockActivity stockActivity;
     private ListView infoTabView;
-    private TextView errorText;
+    private TextView errorView;
     private ProgressBar progressBar;
+
+    private ImageView favToggle;
+    private ImageView facebookShare;
+
+    private SharedPreferences sharedPref;
 
     private String symbol;
     private String indicator = "Price";
+    private String indicatorOnSpinner = "Price";
     private String showedIndicator = "Price";
 
     private String[] indicators;
 
-    private JSONObject sharePlotObject;
+    private JSONObject shareExportObject;
 
 
     class InfoAdapter extends BaseAdapter {
@@ -62,6 +68,7 @@ public class CurrentStockFrag extends Fragment {
         private Spinner spinner;
         private TextView changeButtonView;
         private WebView webView;
+
 
         InfoAdapter(List<String[]> infoList) {
             infoPairs = infoList;
@@ -110,10 +117,14 @@ public class CurrentStockFrag extends Fragment {
                 spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                        indicator = indicators[i];
-                        Log.d(getResources().getString(R.string.curTag), "onItemSelected: " +
-                            indicator);
-                        changeButtonView.setEnabled(indicator != showedIndicator);
+                        indicatorOnSpinner = indicators[i];
+                        Log.d("CURR_STOCK", "onItemSelected: changed to " + indicatorOnSpinner
+                            + ", showed Indicator is " + showedIndicator + ", they are equal? "
+                            + indicatorOnSpinner.equals(showedIndicator));
+                        changeButtonView.setEnabled(true);
+                        if (showedIndicator.equals(indicatorOnSpinner)) {
+                            changeButtonView.setEnabled(false);
+                        }
                     }
 
                     @Override
@@ -121,13 +132,13 @@ public class CurrentStockFrag extends Fragment {
                         // do nothing
                     }
                 });
-                changeButtonView.setEnabled(false);
                 changeButtonView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
                         // TODO: loadURL, ansync, on success do the next line
-                        showedIndicator = indicator;
-                        changeButtonView.setEnabled(false);
+                        Log.d("CURR_STOCK", "changeButtonView onClick: should reload page");
+                        indicator = indicatorOnSpinner;
+                        notifyDataSetChanged();
                     }
                 });
 
@@ -177,7 +188,6 @@ public class CurrentStockFrag extends Fragment {
                     "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/indicatorQuery.php?symbol="
                     + symbol + "?indicator=" + indicator;
 
-
             JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                     new Response.Listener<JSONObject>() {
                         @Override
@@ -204,70 +214,48 @@ public class CurrentStockFrag extends Fragment {
 
         @JavascriptInterface
         public String getSymbol() {
-            return CurrentStockFrag.this.symbol;
+            return symbol;
         }
 
         @JavascriptInterface
         public String getIndicator() {
-            return CurrentStockFrag.this.indicator;
+            return indicator;
         }
+
+        @JavascriptInterface
+        public void setShowedIndicator(String ind) { showedIndicator = ind; }
 
         @JavascriptInterface
         public String getPricePlotObject() {
-            return CurrentStockFrag.this.stockActivity.getPricePlotObject().toString();
+            return stockActivity.getPricePlotObject().toString();
         }
 
         @JavascriptInterface
-        public void setPricePlotObject(String objString) {
-            if (objString == null || objString.equals("null")) { return; }
-            JSONParser parser = new JSONParser();
-            try {
-                JSONObject obj = (JSONObject) parser.parse(objString);
-                CurrentStockFrag.this.stockActivity.setPricePlotObject(obj);
-            }
-            catch (ParseException e) {
-                Log.d("Error", "setPricePlotObject: parse error");
-                return;
-            }
-        }
-
-        @JavascriptInterface
-        public void setSharePlotObject(String objString) {
-            JSONParser parser = new JSONParser();
-
-            try {
-                // not sure if it works
-                CurrentStockFrag.this.sharePlotObject = (JSONObject) parser.parse(objString);
-            }
-            catch (ParseException e) {
-                Log.d("Error", "setSharePlotObject: wrong json format");
-            }
-        }
-
-        @JavascriptInterface
-        public String getSharePlotObject(String indicator) {
-            JSONObject obj = CurrentStockFrag.this.stockActivity.getIndPlotObject(indicator);
+        public String getExportObject(String indicator) {
+            JSONObject obj = stockActivity.getExportObject(indicator);
+            if (obj == null) {  return "null"; }
             return obj.toString();
         }
 
         @JavascriptInterface
-        public String getIndPlotObject(String indicator) {
-            return stockActivity.getIndPlotObject(indicator).toString();
+        public void putExportObject(String indicator, String objString) {
+            Log.d("CURR_STOCK", "putExportObject: " + objString);
+            JSONObject obj = null;
+            try {
+                obj = (JSONObject) new JSONTokener(objString).nextValue();
+            }
+            catch (JSONException e) {
+                Toast.makeText(mContext, e.toString(), Toast.LENGTH_SHORT).show();
+                return;
+            }
+            stockActivity.putExportObject(indicator, obj);
+            // should put here?
+//            shareExportObject = obj;
         }
 
         @JavascriptInterface
-        public void putIndPlotObject(String indicator, String objString) {
-            JSONParser parser = new JSONParser();
-            JSONObject obj = null;
-
-            try {
-                obj = (JSONObject) parser.parse(objString);
-            }
-            catch (ParseException e) {
-                Log.d("Error", "putIndPlotObject: wrong json format");
-                return;
-            }
-            stockActivity.putIndPlotObject(indicator, obj);
+        public void showToastMessage(String msg) {
+            Toast.makeText(mContext, msg, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -276,12 +264,24 @@ public class CurrentStockFrag extends Fragment {
         stockActivity = (StockActivity) getActivity();
         symbol = stockActivity.symbol;
 
-        View view = inflater.inflate(R.layout.current_stock_frag, container, false);
+        View view = inflater.inflate(R.layout.frag_current_stock, container, false);
         progressBar = view.findViewById(R.id.progressBar_current);
         infoTabView = view.findViewById(R.id.info_tab);
-        errorText = view.findViewById(R.id.errMsg_current);
+        errorView = view.findViewById(R.id.errMsg_current);
 
+        favToggle = view.findViewById(R.id.toggle_fav);
+        facebookShare = view.findViewById(R.id.btn_share);
+
+        // styling
         progressBar.setVisibility(View.VISIBLE);
+        errorView.setVisibility(View.GONE);
+        sharedPref = getActivity().getSharedPreferences(getString(R.string.sharePrefKey),
+                Context.MODE_PRIVATE);
+        if (sharedPref.contains(symbol)) {
+            favToggle.setImageResource(R.drawable.filled);
+        }
+
+        setListeners();
 
         // load table and chart
         loadInfoTable();
@@ -289,8 +289,42 @@ public class CurrentStockFrag extends Fragment {
         return view;
     }
 
+    private void setListeners() {
+        favToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SharedPreferences.Editor editor = sharedPref.edit();
+                if (sharedPref.contains(symbol)) {
+                    editor.remove(symbol);
+                    Log.d("FavToggle", "onClick: removed " + symbol);
+                    favToggle.setImageResource(R.drawable.empty);
+                }
+                else {
+                    JSONObject infoObj = stockActivity.getPricePlotObject();
+                    if (infoObj != null) {
+                        JSONObject storedObj = new JSONObject();
+
+                        try {
+                            storedObj.put("symbol", infoObj.getString("Stock Ticker"));
+                            storedObj.put("price", infoObj.getDouble("Last Price"));
+                            storedObj.put("change", infoObj.getString(("Change")));
+                            storedObj.put("orderTag", sharedPref.getAll().size());
+                            editor.putString(symbol, storedObj.toString());
+                            favToggle.setImageResource(R.drawable.filled);
+                            Log.d("FAV_LIST", "add item: " + storedObj.toString());
+                        }
+                        catch (JSONException e) {
+                            Log.d("FAV_LIST_ERR", "add item: " + e.toString());
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private void loadInfoTable() {
         String url = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/stockQuote.php?symbol=" + symbol;
+        Log.d("CURRENT", "loadInfoTable: " + url);
 
         JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
@@ -309,7 +343,7 @@ public class CurrentStockFrag extends Fragment {
                             }
                         }
                         catch (JSONException e) {
-                            errorText.setText(e.toString());
+                            errorView.setText(e.toString());
                             return;
                         }
 
@@ -322,9 +356,9 @@ public class CurrentStockFrag extends Fragment {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        errorText.setText(getResources().getString(R.string.cantLoadMsg));
+                        errorView.setText(getResources().getString(R.string.cantLoadMsg));
                         progressBar.setVisibility(View.GONE);
-                        errorText.setVisibility(View.VISIBLE);
+                        errorView.setVisibility(View.VISIBLE);
                     }
                 });
         stockActivity.requestQueue.add(request);

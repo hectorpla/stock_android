@@ -1,8 +1,6 @@
 package com.zhanpenl.stockquote;
 
 import android.support.design.widget.TabLayout;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 
@@ -11,15 +9,8 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.ViewGroup;
-
-import android.widget.TextView;
-import android.widget.Toast;
 
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
@@ -35,11 +26,9 @@ public class StockActivity extends AppCompatActivity {
     public String test = "some test message, check if it works out";
     public String symbol = null;
     private JSONObject plotObject;
-    private Map<String, JSONObject> indPlotObjects;
+    private Map<String, JSONObject> exportObjects;
     private List<String> dates;
-    private List<Integer> UTCDates;
     private final int INDICATOR_LENGTH = 128;
-    private final int HIST_LENGTH = 1000;
 
     RequestQueue requestQueue;
 
@@ -88,7 +77,7 @@ public class StockActivity extends AppCompatActivity {
         this.setTitle(symbol);
 
         requestQueue = Volley.newRequestQueue(this);
-        indPlotObjects = new HashMap<>();
+        exportObjects = new HashMap<>();
     }
 
 
@@ -158,7 +147,7 @@ public class StockActivity extends AppCompatActivity {
         dates = rowDates.subList(0, sz);
     }
 
-    public JSONObject getPricePlotObject() {
+    public final JSONObject getPricePlotObject() {
         return plotObject;
     }
 
@@ -166,13 +155,13 @@ public class StockActivity extends AppCompatActivity {
         plotObject = obj;
     }
 
-    public JSONObject getIndPlotObject(String indicator) {
-        if (!indPlotObjects.containsKey(indicator)) { return null; }
+    public final JSONObject getExportObject(String indicator) {
+        if (!exportObjects.containsKey(indicator)) { return null; }
         // TODO: might want to return a copy
-        return indPlotObjects.get(indicator);
+        return exportObjects.get(indicator);
     }
 
-    public void putIndPlotObject(String indicator, JSONObject obj) {
-        indPlotObjects.put(indicator, obj);
+    public void putExportObject(String indicator, JSONObject obj) {
+        exportObjects.put(indicator, obj);
     }
 }
