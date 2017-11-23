@@ -1,0 +1,63 @@
+<html>
+<body>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous">
+</script>
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="drawChart.js"></script>
+<script type="text/javascript">
+	// draw a chart in an empty page
+	function drawIndicatorChart() {
+	    var container = document.createElement('div');
+	    
+	    container.id = INDICATOR_CHART_ID;
+	    if (document.getElementById(INDICATOR_CHART_ID) == null)
+	    	document.body.appendChild(container);
+	    
+	    var symbol = CurrentStock.getSymbol();
+	    var indicator = CurrentStock.getIndicator();
+
+	    if (indicator == 'Price') {
+	    	// a global variable
+	    	stockPlotOjbect = JSON.parse(CurrentStock.getPricePlotObject());
+	    	var exportObj = plotStockPrice();
+	    	// TODO: pass back the export object
+	    	CurrentStock.putExportObject('Price', JSON.stringify(exportObj));
+	    	CurrentStock.setShowedIndicator(indicator);
+	    	return;
+	    }
+
+	    // objects are stored as export form in the app
+	    var exportObj = JSON.parse(CurrentStock.getExportObject(indicator));
+
+	    if (exportObj) {
+	    	indPlotObjects[indicator] = extractIndPlotObjectFromExportObject(exportObj);
+	    	console.log('indicator' + indicator + ' cached: ' + 
+	    		JSON.stringify(indPlotObjects[indicator]));
+	    	// legacy problem
+	    	processIndicator(indicator, null);
+	    	// TODO: pass back export object or change indicator
+	    	CurrentStock.setShowedIndicator(indicator);
+	    	return;
+	    }
+
+	    // add cross-domain on aws
+	    // zhpnl-web571.us-west-1.elasticbeanstalk.com
+	    var indURL = "http://10.0.2.2/~hectorlueng/hw8/indicatorQuery.php?symbol=" + symbol + "&indicator=" + indicator;
+	    $.get(indURL, null, function(data) {
+	    	console.log(JSON.stringify(data));
+	    	exportObj = processIndicator(indicator, data);
+	    	CurrentStock.putExportObject(indicator, JSON.stringify(exportObj));
+	    	CurrentStock.setShowedIndicator(indicator);
+	    }, 'json')
+	    .fail(function() {
+	    	console.log("GET FAILED: " + symbol + ", " + indicator);
+	    	CurrentStock.showToastMessage('failed to draw indicator chart');
+	    });	    
+	}
+	drawIndicatorChart();
+</script>
+</body>
+</html>

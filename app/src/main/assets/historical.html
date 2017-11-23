@@ -1,0 +1,27 @@
+<html>
+<body>
+<script src="https://code.highcharts.com/stock/highstock.js"></script>
+<script src="https://code.highcharts.com/stock/modules/exporting.js"></script>
+<script src="drawChart.js"></script>
+<script type="text/javascript">
+	function drawHistChart() {
+	    var container = document.createElement('div');
+	    
+	    container.id = HIST_CHART_ID;
+	    document.body.appendChild(container);
+
+	    var objStr = HistStock.getPricePlotObject();
+	    console.log("---------------------------", objStr);
+	    stockPlotOjbect = JSON.parse(objStr);
+	    // console.log("---------------------------", stockPlotOjbect);
+	    if (stockPlotOjbect == null) {
+	        console.log("WEB APP drawHistChart: plot object null");
+	        HistStock.setErrorMessage("Can't load data");
+	        return;
+	    }
+	    plotHistChart();
+	}
+	drawHistChart();
+</script>
+</body>
+</html>
