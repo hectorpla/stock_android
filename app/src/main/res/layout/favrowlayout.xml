@@ -2,8 +2,9 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="80dp"
-    android:background="@color/white">
+    android:layout_height="100dp"
+    android:background="@color/white"
+    android:clickable="true">
 
     <TextView
         android:id="@+id/fav_symbol"

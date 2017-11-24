@@ -8,7 +8,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="10dp">
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp">
         <TextView
             style="@style/TextAppearance.AppCompat.Title"
             android:layout_width="wrap_content"
@@ -25,6 +26,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Change" />
+        <TextView
+            style="@style/TextAppearance.AppCompat.Title"
+            android:id="@+id/btn_changeIndicator_dummy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Change"
+            android:textColor="@color/grey"/>
 
     </LinearLayout>
     <WebView

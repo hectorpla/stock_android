@@ -21,7 +21,6 @@
 	    	var exportObj = plotStockPrice();
 	    	// TODO: pass back the export object
 	    	CurrentStock.putExportObject('Price', JSON.stringify(exportObj));
-	    	CurrentStock.setShowedIndicator(indicator);
 	    	return;
 	    }
 
@@ -35,7 +34,6 @@
 	    	// legacy problem
 	    	processIndicator(indicator, null);
 	    	// TODO: pass back export object or change indicator
-	    	CurrentStock.setShowedIndicator(indicator);
 	    	return;
 	    }
 
@@ -46,7 +44,6 @@
 	    	console.log(JSON.stringify(data));
 	    	exportObj = processIndicator(indicator, data);
 	    	CurrentStock.putExportObject(indicator, JSON.stringify(exportObj));
-	    	CurrentStock.setShowedIndicator(indicator);
 	    }, 'json')
 	    .fail(function() {
 	    	console.log("GET FAILED: " + symbol + ", " + indicator);

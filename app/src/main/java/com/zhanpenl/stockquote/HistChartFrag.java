@@ -29,8 +29,8 @@ public class HistChartFrag extends Fragment {
         View view = inflater.inflate(R.layout.frag_hist_stock, container, false);
         stockActivity = (StockActivity) getActivity();
 
-        webView = view.findViewById(R.id.webview_hist);
-        errorView = view.findViewById(R.id.errMsg_hist);
+        webView = (WebView) view.findViewById(R.id.webview_hist);
+        errorView = (TextView) view.findViewById(R.id.errMsg_hist);
 
         WebSettings webSettings = webView.getSettings();
 

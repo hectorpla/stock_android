@@ -2,6 +2,7 @@ package com.zhanpenl.stockquote;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -16,6 +17,7 @@ import android.webkit.WebViewClient;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -23,6 +25,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -32,9 +35,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import com.android.volley.toolbox.JsonRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.facebook.FacebookSdk;
 
 /**
  * Created by hectorlueng on 11/17/17.
@@ -54,7 +62,6 @@ public class CurrentStockFrag extends Fragment {
     private String symbol;
     private int indicatorIndex = 0;
     private int indicatorIndexOnSpinner = 0;
-    private String showedIndicator = "Price";
 
     private String[] indicators;
 
@@ -67,7 +74,6 @@ public class CurrentStockFrag extends Fragment {
         private final int TYPE_CHART = 1;
 
         private Spinner spinner;
-        private TextView changeButtonView;
         private WebView webView;
 
 
@@ -107,19 +113,35 @@ public class CurrentStockFrag extends Fragment {
             if (type == TYPE_CHART) {
                 indicators = getResources().getStringArray(R.array.indicator_names);
 
-                view = getLayoutInflater().inflate(R.layout.indicatorchartlayout, null);
-                spinner = view.findViewById(R.id.spinner_indicators);
-                changeButtonView = view.findViewById(R.id.btn_changeIndicator);
-                webView = view.findViewById(R.id.webview_indicator);
+                view = getActivity().getLayoutInflater().inflate(R.layout.indicatorchartlayout, null);
+                spinner = (Spinner) view.findViewById(R.id.spinner_indicators);
+                final TextView changeButtonView = (TextView) view.findViewById(R.id.btn_changeIndicator);
+                final TextView changeButtonViewDummy = (TextView) view.findViewById(R.id.btn_changeIndicator_dummy);
+                webView = (WebView) view.findViewById(R.id.webview_indicator);
 
                 final ArrayAdapter<String> indicatorAdapter = new ArrayAdapter<String>(getActivity(),
                         android.R.layout.simple_dropdown_item_1line, indicators);
+                indicatorAdapter.setNotifyOnChange(false);
                 spinner.setAdapter(indicatorAdapter);
                 spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                         indicatorIndexOnSpinner = i;
-                        changeButtonView.setEnabled(indicatorIndexOnSpinner != indicatorIndex);
+                        Log.d("CURR_ChANGE_IND", "onItemSelected: on spinner -> " +
+                                indicatorIndexOnSpinner + ", showed -> " + indicatorIndex);
+                        if (indicatorIndexOnSpinner == indicatorIndex) {
+                            Log.d("CURR_ChANGE_IND", "onItemSelected: set false");
+                            changeButtonView.setClickable(false);
+                            changeButtonView.setVisibility(View.GONE);
+                            changeButtonViewDummy.setVisibility(View.VISIBLE);
+                        }
+                        else {
+                            Log.d("CURR_CHANGE_IND", "onItemSelected: set true");
+                            changeButtonView.setClickable(true);
+                            changeButtonView.setTextColor(Color.BLACK);
+                            changeButtonViewDummy.setVisibility(View.GONE);
+                            changeButtonView.setVisibility(View.VISIBLE);
+                        }
                     }
 
                     @Override
@@ -147,11 +169,11 @@ public class CurrentStockFrag extends Fragment {
 
             // table row case
             if (view == null) {
-                view = getLayoutInflater().inflate(R.layout.inforowlayout, null);
+                view = getActivity().getLayoutInflater().inflate(R.layout.inforowlayout, null);
             }
-            TextView fieldNameView = view.findViewById(R.id.form_head);
-            TextView fieldDataView = view.findViewById(R.id.form_data);
-            ImageView arrowView = view.findViewById(R.id.image_form_arrow);
+            TextView fieldNameView = (TextView) view.findViewById(R.id.form_head);
+            TextView fieldDataView = (TextView) view.findViewById(R.id.form_data);
+            ImageView arrowView = (ImageView) view.findViewById(R.id.image_form_arrow);
             String[] pair = infoPairs.get(i);
 
             fieldNameView.setText(pair[0]);
@@ -221,9 +243,6 @@ public class CurrentStockFrag extends Fragment {
         }
 
         @JavascriptInterface
-        public void setShowedIndicator(String ind) { showedIndicator = ind; }
-
-        @JavascriptInterface
         public String getPricePlotObject() {
             return stockActivity.getPricePlotObject().toString();
         }
@@ -263,12 +282,12 @@ public class CurrentStockFrag extends Fragment {
         symbol = stockActivity.symbol;
 
         View view = inflater.inflate(R.layout.frag_current_stock, container, false);
-        progressBar = view.findViewById(R.id.progressBar_current);
-        infoTabView = view.findViewById(R.id.info_tab);
-        errorView = view.findViewById(R.id.errMsg_current);
+        progressBar = (ProgressBar) view.findViewById(R.id.progressBar_current);
+        infoTabView = (ListView) view.findViewById(R.id.info_tab);
+        errorView = (TextView) view.findViewById(R.id.errMsg_current);
 
-        favToggle = view.findViewById(R.id.toggle_fav);
-        facebookShare = view.findViewById(R.id.btn_share);
+        favToggle = (ImageView) view.findViewById(R.id.toggle_fav);
+        facebookShare = (ImageView) view.findViewById(R.id.btn_share);
 
         // styling
         progressBar.setVisibility(View.VISIBLE);
@@ -288,6 +307,7 @@ public class CurrentStockFrag extends Fragment {
     }
 
     private void setListeners() {
+        // sharedPreferences
         favToggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -304,10 +324,15 @@ public class CurrentStockFrag extends Fragment {
                         JSONObject storedObj = new JSONObject();
 
                         try {
+                            int sz = sharedPref.getAll().size();
+                            if (sz <= 1) { editor.putInt("count", 0); }
+                            int count = sharedPref.getInt("count", 0);
+
+                            editor.putInt("count", count + 1);
                             storedObj.put("symbol", infoObj.getString("Stock Ticker"));
                             storedObj.put("price", infoObj.getDouble("Last Price"));
                             storedObj.put("change", infoObj.getString(("Change")));
-                            storedObj.put("orderTag", sharedPref.getAll().size());
+                            storedObj.put("orderTag", count);
                             editor.putString(symbol, storedObj.toString());
                             editor.commit(); // forgot to commit
                             favToggle.setImageResource(R.drawable.filled);
@@ -319,6 +344,67 @@ public class CurrentStockFrag extends Fragment {
                         }
                     }
                 }
+            }
+        });
+
+
+        facebookShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final String url = "http://export.highcharts.com/";
+                final JSONObject data = new JSONObject();
+
+                try {
+                    data.put("async", true);
+                    data.put("type", "jpeg");
+                    data.put("options", shareExportObject);
+                }
+                catch (JSONException e) {
+                    Log.d("CHART_EXPORT", "constructing json object error");
+                }
+//                StringRequest chartExportRequest = new StringRequest(Request.Method.POST, url,
+//                        new Response.Listener<String>() {
+//                            @Override
+//                            public void onResponse(String response) {
+//                                Log.d("CHART_EXPORT", "onResponse: " + url + response);
+//                            }
+//                        },
+//                        new Response.ErrorListener() {
+//                            @Override
+//                            public void onErrorResponse(VolleyError error) {
+//                                Log.d("CHART_EXPORT", "onResponse: " + error.toString());
+//                            }
+//                        }) {
+//                    @Override
+//                    public byte[] getBody() throws AuthFailureError {
+//                        Log.d("CHART_EXPORT", "getBody: " + data.toString());
+//                        try {
+//                            return data.toString().getBytes("utf-8");
+//                        }
+//                        catch (UnsupportedEncodingException e) {
+//                            Log.d("CHART_EXPORT", "getBody: " + e.toString());
+//                            return null;
+//                        }
+//                    }
+//                };
+
+                JsonObjectRequest chartExportRequest = new JsonObjectRequest(Request.Method.POST,
+                        url, data,
+                        new Response.Listener<JSONObject>() {
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                Log.d("CHART_EXPORT", "onResponse: " + response.toString());
+                            }
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                Log.d("CHART_EXPORT", "onErrorResponse: " + error.toString());
+                            }
+                        });
+
+                // TODO: blocking progress bar
+                stockActivity.requestQueue.add(chartExportRequest);
             }
         });
     }

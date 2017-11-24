@@ -11,6 +11,9 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.ContextMenu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -56,13 +59,13 @@ public class MainActivity extends AppCompatActivity {
     ListView favListView;
     ProgressBar progressBar;
 
-
     SharedPreferences sharedPref;
     String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
 
     int sortType = 0;
     boolean isSortAsc = true;
     ArrayAdapter<JSONObject> favListAdapter;
+    List<JSONObject> favList;
 
     List<Comparator<JSONObject>> comparators;
 
@@ -75,12 +78,12 @@ public class MainActivity extends AppCompatActivity {
 
         requestQueue = Volley.newRequestQueue(this);
 
-        getButton = findViewById(R.id.btn_get);
-        clearButton = findViewById(R.id.btn_clear);
-        catSpinner = findViewById(R.id.spinner_cat);
-        ascDescSpinner = findViewById(R.id.spinner_asc_desc);
-        favListView = findViewById(R.id.list_fav);
-        progressBar = findViewById(R.id.progressBar_main);
+        getButton = (Button) findViewById(R.id.btn_get);
+        clearButton = (Button) findViewById(R.id.btn_clear);
+        catSpinner = (Spinner) findViewById(R.id.spinner_cat);
+        ascDescSpinner = (Spinner) findViewById(R.id.spinner_asc_desc);
+        favListView = (ListView) findViewById(R.id.list_fav);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar_main);
 
         Log.d("MAIN_ACTIVITY", "onCreate: >>>>>>>>>>>>>>>>>>>>>>");
 
@@ -88,17 +91,31 @@ public class MainActivity extends AppCompatActivity {
         // favorite list
         sharedPref = getSharedPreferences(getString(R.string.sharePrefKey),
                 Context.MODE_PRIVATE);
+        Log.d("FAV_LIST_TRAVERSE", "sharedPref size: " + sharedPref.getAll().size());
+        favList = new ArrayList<>();
+        for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
+            Log.d("FAV_LOAD", "key: " + entry.getKey() + ", value: " + entry.getValue());
+            if (entry.getKey().equals("count")) { continue; }
+            try {
+                JSONObject favListObj =
+                        (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
+                favList.add(favListObj);
+            }
+            catch (JSONException e) {
+                Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
+            }
+        }
         favListAdapter = new ArrayAdapter<JSONObject>(this,
-                android.R.layout.simple_spinner_dropdown_item) {
+                android.R.layout.simple_spinner_dropdown_item, favList) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 if (convertView == null) {
                     convertView = getLayoutInflater().inflate(R.layout.favrowlayout, null);
                 }
 
-                TextView symbolText = convertView.findViewById(R.id.fav_symbol);
-                TextView priceText = convertView.findViewById(R.id.fav_price);
-                TextView changeText = convertView.findViewById(R.id.fav_change);
+                TextView symbolText = (TextView) convertView.findViewById(R.id.fav_symbol);
+                TextView priceText = (TextView) convertView.findViewById(R.id.fav_price);
+                TextView changeText = (TextView) convertView.findViewById(R.id.fav_change);
                 JSONObject favItem = getItem(position);
                 final String symbol;
 
@@ -126,24 +143,18 @@ public class MainActivity extends AppCompatActivity {
                         startStockActivity(symbol);
                     }
                 });
+                // TODO: add long press listenser
+                convertView.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View view) {
+                        return false;
+                    }
+                });
                 return convertView;
             }
         };
-
-        Log.d("FAV_LIST_TRAVERSE", "sharedPref size: " + sharedPref.getAll().size());
-        for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
-            try {
-                JSONObject favListObj =
-                        (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
-                Log.d("FAV_LIST_TRAVERSE", favListObj.toString());
-                favListAdapter.add(favListObj);
-            }
-            catch (JSONException e) {
-                Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
-            }
-        }
-        favListAdapter.setNotifyOnChange(true);
         favListView.setAdapter(favListAdapter);
+        registerForContextMenu(favListView);
 
         // sort type Spinner
         final ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
@@ -220,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // autocomplete
-        autoTex = findViewById(R.id.autocomp_text);
+        autoTex = (AutoCompleteTextView) findViewById(R.id.autocomp_text);
         autoTex.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -361,5 +372,38 @@ public class MainActivity extends AppCompatActivity {
         if (!isSortAsc) { comp = comp.reversed(); }
         favListAdapter.sort(comp);
         favListAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_delete_fav, menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+
+        if (item.getItemId() == R.id.delete_yes) {
+            SharedPreferences.Editor editor = sharedPref.edit();
+
+            try {
+                String symbol = favList.get(info.position).getString("symbol");
+                editor.remove(symbol);
+                editor.commit();
+            }
+            catch (JSONException e) {
+                Log.d("FAV_DELETE", "onContextItemSelected: " + e.toString());
+            }
+            favList.remove(info.position);
+            favListAdapter.notifyDataSetChanged();
+            Toast.makeText(this, "selected true", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        else {
+            Toast.makeText(this, "selected no", Toast.LENGTH_SHORT).show();
+            return  false;
+        }
     }
 }

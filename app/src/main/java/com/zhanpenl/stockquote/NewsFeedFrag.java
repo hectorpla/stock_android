@@ -60,19 +60,18 @@ public class NewsFeedFrag extends Fragment {
         @Override
         public View getView(int i, View view, ViewGroup viewGroup) {
             if (view == null) {
-                view = getLayoutInflater().inflate(R.layout.newsrowlayout, null);
+                view = getActivity().getLayoutInflater().inflate(R.layout.newsrowlayout, null);
             }
-            TextView titleView = view.findViewById(R.id.news_title);
-            TextView authorView = view.findViewById(R.id.news_author);
-            TextView dateView = view.findViewById(R.id.news_date);
+            TextView titleView = (TextView) view.findViewById(R.id.news_title);
+            TextView authorView = (TextView) view.findViewById(R.id.news_author);
+            TextView dateView = (TextView) view.findViewById(R.id.news_date);
             final String[] news = newsList.get(i); // final makes it accessable from callback
 
             titleView.setText(news[0]);
             authorView.setText(getResources().getString(R.string.newsAuthor, news[2]));
             dateView.setText(getResources().getString(R.string.newsDate, news[3]));
+            Log.d("NEWS", "getView: " + news[2]);
 
-
-            // TODO: add onclick for the entire view
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -92,8 +91,8 @@ public class NewsFeedFrag extends Fragment {
         stockActvity = (StockActivity) getActivity();
         symbol = stockActvity.symbol;
 
-        newsListView = view.findViewById(R.id.news_list);
-        errorView = view.findViewById(R.id.errMsg_news);
+        newsListView = (ListView) view.findViewById(R.id.news_list);
+        errorView = (TextView) view.findViewById(R.id.errMsg_news);
 
         // load news
         loadNews();
