@@ -332,6 +332,7 @@ public class CurrentStockFrag extends Fragment {
                             storedObj.put("symbol", infoObj.getString("Stock Ticker"));
                             storedObj.put("price", infoObj.getDouble("Last Price"));
                             storedObj.put("change", infoObj.getString(("Change")));
+                            storedObj.put("prevPrice", infoObj.getString("prevPrice"));
                             storedObj.put("orderTag", count);
                             editor.putString(symbol, storedObj.toString());
                             editor.commit(); // forgot to commit
@@ -362,48 +363,37 @@ public class CurrentStockFrag extends Fragment {
                 catch (JSONException e) {
                     Log.d("CHART_EXPORT", "constructing json object error");
                 }
-//                StringRequest chartExportRequest = new StringRequest(Request.Method.POST, url,
-//                        new Response.Listener<String>() {
-//                            @Override
-//                            public void onResponse(String response) {
-//                                Log.d("CHART_EXPORT", "onResponse: " + url + response);
-//                            }
-//                        },
-//                        new Response.ErrorListener() {
-//                            @Override
-//                            public void onErrorResponse(VolleyError error) {
-//                                Log.d("CHART_EXPORT", "onResponse: " + error.toString());
-//                            }
-//                        }) {
-//                    @Override
-//                    public byte[] getBody() throws AuthFailureError {
-//                        Log.d("CHART_EXPORT", "getBody: " + data.toString());
-//                        try {
-//                            return data.toString().getBytes("utf-8");
-//                        }
-//                        catch (UnsupportedEncodingException e) {
-//                            Log.d("CHART_EXPORT", "getBody: " + e.toString());
-//                            return null;
-//                        }
-//                    }
-//                };
-
-                JsonObjectRequest chartExportRequest = new JsonObjectRequest(Request.Method.POST,
-                        url, data,
-                        new Response.Listener<JSONObject>() {
+                StringRequest chartExportRequest = new StringRequest(Request.Method.POST, url,
+                        new Response.Listener<String>() {
                             @Override
-                            public void onResponse(JSONObject response) {
-                                Log.d("CHART_EXPORT", "onResponse: " + response.toString());
+                            public void onResponse(String response) {
+                                Log.d("CHART_EXPORT", "onResponse: " + url + response);
                             }
                         },
                         new Response.ErrorListener() {
                             @Override
                             public void onErrorResponse(VolleyError error) {
-                                Log.d("CHART_EXPORT", "onErrorResponse: " + error.toString());
+                                Log.d("CHART_EXPORT", "onResponse: " + error.toString());
                             }
-                        });
-
+                        }) {
+                        @Override
+                        public byte[] getBody() {
+                            Log.d("CHART_EXPORT", "getBody: " + data.toString());
+                            try {
+                                return data.toString().getBytes("utf-8");
+                            }
+                            catch (UnsupportedEncodingException e) {
+                                Log.d("CHART_EXPORT", "getBody: " + e.toString());
+                                return null;
+                            }
+                        }
+                        @Override
+                        public String getBodyContentType() {
+                            return "application/json";
+                        }
+                };
                 // TODO: blocking progress bar
+
                 stockActivity.requestQueue.add(chartExportRequest);
             }
         });

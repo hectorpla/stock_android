@@ -34,6 +34,7 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.json.JSONArray;
@@ -60,12 +61,12 @@ public class MainActivity extends AppCompatActivity {
     ProgressBar progressBar;
 
     SharedPreferences sharedPref;
-    String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
+    final String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
 
     int sortType = 0;
     boolean isSortAsc = true;
     ArrayAdapter<JSONObject> favListAdapter;
-    List<JSONObject> favList;
+    final List<JSONObject> favList = new ArrayList<>();
 
     List<Comparator<JSONObject>> comparators;
 
@@ -76,35 +77,21 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        requestQueue = Volley.newRequestQueue(this);
-
         getButton = (Button) findViewById(R.id.btn_get);
         clearButton = (Button) findViewById(R.id.btn_clear);
         catSpinner = (Spinner) findViewById(R.id.spinner_cat);
         ascDescSpinner = (Spinner) findViewById(R.id.spinner_asc_desc);
         favListView = (ListView) findViewById(R.id.list_fav);
         progressBar = (ProgressBar) findViewById(R.id.progressBar_main);
+        autoRefresh = (Switch) findViewById(R.id.switch_refresh);
+        manRefresh = (ImageButton) findViewById(R.id.btn_refresh);
 
-        Log.d("MAIN_ACTIVITY", "onCreate: >>>>>>>>>>>>>>>>>>>>>>");
-
+        // initialize functional constructs
         setComparators();
+        requestQueue = Volley.newRequestQueue(this);
+        sharedPref = getSharedPreferences(getString(R.string.sharePrefKey), Context.MODE_PRIVATE);
+
         // favorite list
-        sharedPref = getSharedPreferences(getString(R.string.sharePrefKey),
-                Context.MODE_PRIVATE);
-        Log.d("FAV_LIST_TRAVERSE", "sharedPref size: " + sharedPref.getAll().size());
-        favList = new ArrayList<>();
-        for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
-            Log.d("FAV_LOAD", "key: " + entry.getKey() + ", value: " + entry.getValue());
-            if (entry.getKey().equals("count")) { continue; }
-            try {
-                JSONObject favListObj =
-                        (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
-                favList.add(favListObj);
-            }
-            catch (JSONException e) {
-                Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
-            }
-        }
         favListAdapter = new ArrayAdapter<JSONObject>(this,
                 android.R.layout.simple_spinner_dropdown_item, favList) {
             @Override
@@ -143,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
                         startStockActivity(symbol);
                     }
                 });
-                // TODO: add long press listenser
                 convertView.setOnLongClickListener(new View.OnLongClickListener() {
                     @Override
                     public boolean onLongClick(View view) {
@@ -154,7 +140,69 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         favListView.setAdapter(favListAdapter);
+        loadFavList();
         registerForContextMenu(favListView);
+
+        // refresh mechanism
+        manRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final int sz = sharedPref.getAll().size() - 1;
+                int count = 0;
+                final String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?realtime=true&symbol=";
+                final SharedPreferences.Editor editor = sharedPref.edit();
+
+                for (final String sym : sharedPref.getAll().keySet()) {
+                    if (sym.equals("count")) { continue; }
+                    count++;
+                    final int currentCount = count;
+                    JsonObjectRequest refreshRequest = new JsonObjectRequest(url + sym, null,
+                            new Response.Listener<JSONObject>() {
+                                @Override
+                                public void onResponse(JSONObject response) {
+                                    try {
+                                        JSONObject record =
+                                                (JSONObject) new JSONTokener(sharedPref.getString(sym,
+                                                        null)).nextValue();
+                                        double newPrice = response.getDouble("Last Price");
+                                        double prevPrice = record.getDouble("prevPrice");
+                                        double change = newPrice - prevPrice;
+                                        double changePer = change / prevPrice * 100; // TODO: round up
+                                        String changeString = change + " (" + changePer + "%)";
+
+                                        // TODO: should update prevPrice
+                                        record.put("price", newPrice);
+                                        record.put("change", changeString);
+                                        editor.putString(sym, record.toString());
+                                        editor.commit();
+                                    }
+                                    catch (JSONException e) {
+                                        Log.d("FAV_LIST_UPDATE", e.toString());
+                                    }
+                                    if (currentCount == sz) {
+                                        // update list, notify change
+                                        loadFavList();
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                @Override
+                                public void onErrorResponse(VolleyError error) {
+                                    Toast.makeText(getApplication(),
+                                            "can't refresh info for " + sym,
+                                            Toast.LENGTH_SHORT).show();
+                                    Log.d("FAV_LIST_UPDATE", url + sym + ": "
+                                            + error.toString());
+                                    if (currentCount == sz) {
+                                        loadFavList();
+                                    }
+                                }
+                            }
+                    );
+                    requestQueue.add(refreshRequest);
+                }
+            }
+        });
 
         // sort type Spinner
         final ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
@@ -297,12 +345,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void startStockActivity(String symbol) {
         Intent i = new Intent(getApplicationContext(), StockActivity.class);
+
         if (symbol.length() == 0) {
             Toast.makeText(getApplicationContext(), "Please enter a symbol",
                     Toast.LENGTH_SHORT).show();
             return;
         }
-
         i.putExtra("symbol", symbol.toUpperCase());
         startActivity(i);
     }
@@ -365,6 +413,25 @@ public class MainActivity extends AppCompatActivity {
                 return Float.parseFloat(str);
             }
         });
+    }
+
+    private void loadFavList() {
+        favList.clear();
+        Log.d("FAV_LIST_TRAVERSE", "sharedPref size: " + sharedPref.getAll().size());
+        for (Map.Entry<String, ?> entry : sharedPref.getAll().entrySet()) {
+            Log.d("FAV_LOAD", "key: " + entry.getKey() + ", value: " + entry.getValue());
+            if (entry.getKey().equals("count")) { continue; }
+            try {
+                JSONObject favListObj =
+                        (JSONObject) new JSONTokener(entry.getValue().toString()).nextValue();
+                favList.add(favListObj);
+            }
+            catch (JSONException e) {
+                Log.d("FAV_LIST", "onCreate: failed getting in fav list: " + entry.getKey());
+            }
+        }
+        sortFavList();
+        favListAdapter.notifyDataSetChanged();
     }
 
     private void sortFavList() {
