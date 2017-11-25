@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.os.CountDownTimer;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -20,6 +21,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -51,8 +53,8 @@ import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
     AutoCompleteTextView autoTex;
-    Button getButton;
-    Button clearButton;
+    TextView getButton;
+    TextView clearButton;
     ImageButton manRefresh;
     Switch autoRefresh;
     Spinner catSpinner;
@@ -77,8 +79,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        getButton = (Button) findViewById(R.id.btn_get);
-        clearButton = (Button) findViewById(R.id.btn_clear);
+        getButton = (TextView) findViewById(R.id.btn_get);
+        clearButton = (TextView) findViewById(R.id.btn_clear);
         catSpinner = (Spinner) findViewById(R.id.spinner_cat);
         ascDescSpinner = (Spinner) findViewById(R.id.spinner_asc_desc);
         favListView = (ListView) findViewById(R.id.list_fav);
@@ -90,6 +92,19 @@ public class MainActivity extends AppCompatActivity {
         setComparators();
         requestQueue = Volley.newRequestQueue(this);
         sharedPref = getSharedPreferences(getString(R.string.sharePrefKey), Context.MODE_PRIVATE);
+        final CountDownTimer refreshTimer = new CountDownTimer(Long.MAX_VALUE, 6000) {
+            @Override
+            public void onTick(long l) {
+                Log.d("TIMER", "onTick: !!");
+                refreshFav();
+            }
+
+            @Override
+            public void onFinish() {
+                // do nothing
+                Log.d("TIMER", "onFinish: !");
+            }
+        };
 
         // favorite list
         favListAdapter = new ArrayAdapter<JSONObject>(this,
@@ -144,65 +159,26 @@ public class MainActivity extends AppCompatActivity {
         registerForContextMenu(favListView);
 
         // refresh mechanism
-        manRefresh.setOnClickListener(new View.OnClickListener() {
+        autoRefresh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
-            public void onClick(View view) {
-                final int sz = sharedPref.getAll().size() - 1;
-                int count = 0;
-                final String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?realtime=true&symbol=";
-                final SharedPreferences.Editor editor = sharedPref.edit();
-
-                for (final String sym : sharedPref.getAll().keySet()) {
-                    if (sym.equals("count")) { continue; }
-                    count++;
-                    final int currentCount = count;
-                    JsonObjectRequest refreshRequest = new JsonObjectRequest(url + sym, null,
-                            new Response.Listener<JSONObject>() {
-                                @Override
-                                public void onResponse(JSONObject response) {
-                                    try {
-                                        JSONObject record =
-                                                (JSONObject) new JSONTokener(sharedPref.getString(sym,
-                                                        null)).nextValue();
-                                        double newPrice = response.getDouble("Last Price");
-                                        double prevPrice = record.getDouble("prevPrice");
-                                        double change = newPrice - prevPrice;
-                                        double changePer = change / prevPrice * 100; // TODO: round up
-                                        String changeString = change + " (" + changePer + "%)";
-
-                                        // TODO: should update prevPrice
-                                        record.put("price", newPrice);
-                                        record.put("change", changeString);
-                                        editor.putString(sym, record.toString());
-                                        editor.commit();
-                                    }
-                                    catch (JSONException e) {
-                                        Log.d("FAV_LIST_UPDATE", e.toString());
-                                    }
-                                    if (currentCount == sz) {
-                                        // update list, notify change
-                                        loadFavList();
-                                    }
-                                }
-                            },
-                            new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError error) {
-                                    Toast.makeText(getApplication(),
-                                            "can't refresh info for " + sym,
-                                            Toast.LENGTH_SHORT).show();
-                                    Log.d("FAV_LIST_UPDATE", url + sym + ": "
-                                            + error.toString());
-                                    if (currentCount == sz) {
-                                        loadFavList();
-                                    }
-                                }
-                            }
-                    );
-                    requestQueue.add(refreshRequest);
+            public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
+                if (isChecked) {
+                    Log.d("AUTOREFRESH", "timer starts");
+                    refreshTimer.start();
+                }
+                else {
+                    Log.d("AUTOREFRESH", "timer stops");
+                    refreshTimer.cancel();
                 }
             }
         });
+        manRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                refreshFav();
+            }
+        });
+
 
         // sort type Spinner
         final ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
@@ -343,6 +319,7 @@ public class MainActivity extends AppCompatActivity {
         autoTex.setThreshold(1);
     }
 
+    /* internal methods  */
     private void startStockActivity(String symbol) {
         Intent i = new Intent(getApplicationContext(), StockActivity.class);
 
@@ -439,6 +416,63 @@ public class MainActivity extends AppCompatActivity {
         if (!isSortAsc) { comp = comp.reversed(); }
         favListAdapter.sort(comp);
         favListAdapter.notifyDataSetChanged();
+    }
+
+    private void refreshFav() {
+        final int sz = sharedPref.getAll().size() - 1;
+        int count = 0;
+        final String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?realtime=true&symbol=";
+        final SharedPreferences.Editor editor = sharedPref.edit();
+
+        for (final String sym : sharedPref.getAll().keySet()) {
+            if (sym.equals("count")) { continue; }
+            count++;
+            final int currentCount = count;
+            JsonObjectRequest refreshRequest = new JsonObjectRequest(url + sym, null,
+                    new Response.Listener<JSONObject>() {
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            try {
+                                JSONObject record =
+                                        (JSONObject) new JSONTokener(sharedPref.getString(sym,
+                                                null)).nextValue();
+                                double newPrice = response.getDouble("Last Price");
+                                double prevPrice = record.getDouble("prevPrice");
+                                double change = newPrice - prevPrice;
+                                double changePer = change / prevPrice * 100; // TODO: round up
+                                String changeString = String.format("%.2f (%.2f%%)", change, changePer);
+
+                                // TODO: should update prevPrice
+                                record.put("price", newPrice);
+                                record.put("change", changeString);
+                                editor.putString(sym, record.toString());
+                                editor.apply();
+                            }
+                            catch (JSONException e) {
+                                Log.d("FAV_LIST_UPDATE", e.toString());
+                            }
+                            if (currentCount == sz) {
+                                // update list, notify change
+                                loadFavList();
+                            }
+                        }
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            Toast.makeText(getApplication(),
+                                    "can't refresh info for " + sym,
+                                    Toast.LENGTH_SHORT).show();
+                            Log.d("FAV_LIST_UPDATE", url + sym + ": "
+                                    + error.toString());
+                            if (currentCount == sz) {
+                                loadFavList();
+                            }
+                        }
+                    }
+            );
+            requestQueue.add(refreshRequest);
+        }
     }
 
     @Override

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -43,6 +44,8 @@ import java.util.Map;
 import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.facebook.FacebookSdk;
+import com.facebook.share.model.ShareLinkContent;
+import com.facebook.share.widget.ShareDialog;
 
 /**
  * Created by hectorlueng on 11/17/17.
@@ -116,7 +119,6 @@ public class CurrentStockFrag extends Fragment {
                 view = getActivity().getLayoutInflater().inflate(R.layout.indicatorchartlayout, null);
                 spinner = (Spinner) view.findViewById(R.id.spinner_indicators);
                 final TextView changeButtonView = (TextView) view.findViewById(R.id.btn_changeIndicator);
-                final TextView changeButtonViewDummy = (TextView) view.findViewById(R.id.btn_changeIndicator_dummy);
                 webView = (WebView) view.findViewById(R.id.webview_indicator);
 
                 final ArrayAdapter<String> indicatorAdapter = new ArrayAdapter<String>(getActivity(),
@@ -129,19 +131,7 @@ public class CurrentStockFrag extends Fragment {
                         indicatorIndexOnSpinner = i;
                         Log.d("CURR_ChANGE_IND", "onItemSelected: on spinner -> " +
                                 indicatorIndexOnSpinner + ", showed -> " + indicatorIndex);
-                        if (indicatorIndexOnSpinner == indicatorIndex) {
-                            Log.d("CURR_ChANGE_IND", "onItemSelected: set false");
-                            changeButtonView.setClickable(false);
-                            changeButtonView.setVisibility(View.GONE);
-                            changeButtonViewDummy.setVisibility(View.VISIBLE);
-                        }
-                        else {
-                            Log.d("CURR_CHANGE_IND", "onItemSelected: set true");
-                            changeButtonView.setClickable(true);
-                            changeButtonView.setTextColor(Color.BLACK);
-                            changeButtonViewDummy.setVisibility(View.GONE);
-                            changeButtonView.setVisibility(View.VISIBLE);
-                        }
+                        changeButtonView.setEnabled(indicatorIndexOnSpinner != indicatorIndex);
                     }
 
                     @Override
@@ -367,7 +357,14 @@ public class CurrentStockFrag extends Fragment {
                         new Response.Listener<String>() {
                             @Override
                             public void onResponse(String response) {
-                                Log.d("CHART_EXPORT", "onResponse: " + url + response);
+                                String imageURL = url + response;
+                                ShareDialog shareDialog = new ShareDialog(getActivity());
+                                ShareLinkContent content = new ShareLinkContent.Builder()
+                                        .setContentUrl(Uri.parse(imageURL))
+                                        .build();
+
+                                Log.d("CHART_EXPORT", "onResponse: " + imageURL);
+                                shareDialog.show(content);
                             }
                         },
                         new Response.ErrorListener() {

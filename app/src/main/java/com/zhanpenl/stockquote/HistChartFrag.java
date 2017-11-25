@@ -23,6 +23,7 @@ public class HistChartFrag extends Fragment {
     private StockActivity stockActivity;
     private WebView webView;
     private TextView errorView;
+    private boolean loaded = false;
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -52,7 +53,7 @@ public class HistChartFrag extends Fragment {
 
         Log.d("HIST", "setUserVisibleHint: called!!!!!!!");
         // not sure if it is a good way to address it
-        if (webView != null) {
+        if (webView != null && !loaded) {
             webView.loadUrl("file:///android_asset/historical.html");
         }
     }
@@ -79,6 +80,11 @@ public class HistChartFrag extends Fragment {
                 }
             });
             Log.d("HIST", "setErrorMessage: javascript interface " + errorView.getText());
+        }
+
+        @JavascriptInterface
+        public void setLoaded() {
+            loaded = true;
         }
     }
 }

@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">StockQuote</string>
+    <string name="title_activity_stock">StockActivity</string>
+    <string name="action_settings">Settings</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="curTag"> Current Stock </string>
+
+    <string name="cantLoadMsg"> Can\'t log data </string>
+
+    <string name="newsAuthor"> Author: %1$s </string>
+    <string name="newsDate"> Date: %1$s </string>
+
+    <string name="facebook_app_id">126883171316784</string>
+    <string name="fb_login_protocol_scheme">fb126883171316784</string>
+
+    <string name="sharePrefKey"> STOCK_APP </string>
+
+    <string-array name="indicator_names">
+        <item> Price </item>
+        <item> SMA </item>
+        <item> EMA </item>
+        <item> STOCH </item>
+        <item> RSI </item>
+        <item> ADX </item>
+        <item> CCI </item>
+        <item> BBANDS </item>
+        <item> MACD </item>
+    </string-array>
+
+    <string-array name="sort_categories">
+        <item> Sort by </item>
+        <item> Default </item>
+        <item> Symbol </item>
+        <item> Price </item>
+        <item> Change </item>
+    </string-array>
+
+    <string-array name="sort_order">
+        <item> Order </item>
+        <item> Ascending </item>
+        <item> Descending </item>
+    </string-array>
+
+</resources>

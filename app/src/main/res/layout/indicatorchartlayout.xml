@@ -26,14 +26,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Change" />
-        <TextView
-            style="@style/TextAppearance.AppCompat.Title"
-            android:id="@+id/btn_changeIndicator_dummy"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Change"
-            android:textColor="@color/grey"/>
-
     </LinearLayout>
     <WebView
         android:id="@+id/webview_indicator"
