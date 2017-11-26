@@ -6,7 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    style="@style/MainTheme"
     android:background="@drawable/restaurant"
     tools:context="com.zhanpenl.stockquote.MainActivity">
 
@@ -14,12 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:gravity="center">
+        android:gravity="center"
+        style="@style/MainActItem">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/white"
-            android:textSize="30dp"
+            android:textSize="30sp"
             android:text="Stock Market Search"/>
 
         <android.support.v7.widget.AppCompatAutoCompleteTextView
@@ -27,12 +27,14 @@
             android:layout_width="320dp"
             android:layout_height="wrap_content"
             android:textColor="@color/white"
-            android:layout_centerInParent="true"/>
+            android:layout_centerInParent="true"
+            style="@style/MainActItem" />
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center" >
+            android:layout_gravity="center"
+            style="@style/MainActItem" >
             <RelativeLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -42,7 +44,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Get Quote"
-                    android:textSize="20dp"
+                    android:textSize="20sp"
                     android:textColor="@color/colorPrimaryDark"/>
 
                 <TextView
@@ -50,7 +52,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Clear"
-                    android:textSize="20dp"
+                    android:textSize="20sp"
                     android:layout_toEndOf="@+id/btn_get"
                     android:layout_marginLeft="50dp"
                     android:textColor="@color/colorPrimaryDark"/>
@@ -60,7 +62,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            style="@style/MainActItem" >
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -85,7 +88,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            style="@style/MainActItem" >
 
             <Spinner
                 android:id="@+id/spinner_cat"
@@ -102,9 +106,9 @@
 
         <ListView
             android:id="@+id/list_fav"
+            style="@style/FavList"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            style="@style/FavItem" />
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
     <ProgressBar

@@ -70,7 +70,6 @@ public class NewsFeedFrag extends Fragment {
             titleView.setText(news[0]);
             authorView.setText(getResources().getString(R.string.newsAuthor, news[2]));
             dateView.setText(getResources().getString(R.string.newsDate, news[3]));
-            Log.d("NEWS", "getView: " + news[2]);
 
             view.setOnClickListener(new View.OnClickListener() {
                 @Override

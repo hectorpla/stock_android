@@ -13,7 +13,8 @@
         android:layout_marginBottom="10dp"
         android:layout_marginLeft="5dp"
         android:layout_marginRight="5dp"
-        android:layout_marginTop="10dp" />
+        android:layout_marginTop="10dp"
+        android:text="abc"/>
 
     <TextView
         android:id="@+id/news_author"
@@ -22,7 +23,8 @@
         android:layout_marginBottom="5dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:layout_marginTop="5dp" />
+        android:layout_marginTop="5dp"
+        android:text="aaass2"/>
 
     <TextView
         android:id="@+id/news_date"
@@ -31,5 +33,6 @@
         android:layout_marginBottom="5dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:layout_marginTop="5dp" />
+        android:layout_marginTop="5dp"
+        android:text="98986"/>
 </LinearLayout>

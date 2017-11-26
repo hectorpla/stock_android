@@ -5,7 +5,7 @@
     <string name="section_format">Hello World from section: %1$d</string>
     <string name="curTag"> Current Stock </string>
 
-    <string name="cantLoadMsg"> Can\'t log data </string>
+    <string name="cantLoadMsg"> Can\'t load data </string>
 
     <string name="newsAuthor"> Author: %1$s </string>
     <string name="newsDate"> Date: %1$s </string>

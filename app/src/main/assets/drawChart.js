@@ -130,8 +130,8 @@ function plotStockPrice() {
 }
 
 
-
 function plotLineChart(title, dates, seriesData) {
+    console.log(title);
     var acroynim = title.split(' ').slice(-1)[0].slice(1,-1).toUpperCase();
     var obj = {
         chart: {
@@ -181,7 +181,7 @@ function plotLineChart(title, dates, seriesData) {
 // reverse conversion: indicator plot obj and export obj
 function extractIndPlotObjectFromExportObject(exportObj) {
     return {
-        fullName: exportObj.title,
+        fullName: exportObj.title.text,
         dates: exportObj.xAxis.categories,
         seriesObjs: exportObj.series
     }
@@ -196,15 +196,6 @@ function processIndicator(indicator, obj) {
         var subIndicators = obj['sub-indicators'];
         var seriesObjs = Array();
         
-        // cache dates
-        // if (stockPlotOjbect.dates === undefined) {
-        //     var end = Math.min(CHARTLENGTH, obj.dates.length);
-        //     stockPlotOjbect.dates = obj.dates.slice(0, end);
-        // }
-
-        // console.log(obj);
-        // console.log(typeof obj, symbol, fullName, subIndicators);
-        // console.log(dates);
         dates = compressedDates(dates);
         for (subIndicator of subIndicators) {
             seriesObjs.push({
@@ -224,8 +215,7 @@ function processIndicator(indicator, obj) {
     // use cached data
     if (indPlotObjects[indicator] !== undefined) {
         obj = indPlotObjects[indicator];
-        plotLineChart(obj.fullName, compressedDates(), obj.seriesObjs);
-        return;
+        return plotLineChart(obj.fullName, obj.dates, obj.seriesObjs);
     }
     
     return plot(obj);

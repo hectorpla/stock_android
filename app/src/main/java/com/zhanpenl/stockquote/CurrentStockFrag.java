@@ -27,6 +27,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
@@ -43,7 +44,11 @@ import java.util.Map;
 
 import com.android.volley.toolbox.JsonRequest;
 import com.android.volley.toolbox.StringRequest;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
+import com.facebook.share.Sharer;
 import com.facebook.share.model.ShareLinkContent;
 import com.facebook.share.widget.ShareDialog;
 
@@ -364,6 +369,27 @@ public class CurrentStockFrag extends Fragment {
                                         .build();
 
                                 Log.d("CHART_EXPORT", "onResponse: " + imageURL);
+                                shareDialog.registerCallback(CallbackManager.Factory.create(),
+                                        new FacebookCallback<Sharer.Result>() {
+                                            @Override
+                                            public void onSuccess(Sharer.Result result) {
+                                                Toast.makeText(getActivity(), "shared successfully",
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+
+                                            @Override
+                                            public void onCancel() {
+                                                Toast.makeText(getActivity(), "sharing canceled",
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+
+                                            @Override
+                                            public void onError(FacebookException error) {
+                                                Toast.makeText(getActivity(),
+                                                        "error happened",
+                                                        Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
                                 shareDialog.show(content);
                             }
                         },
@@ -389,8 +415,6 @@ public class CurrentStockFrag extends Fragment {
                             return "application/json";
                         }
                 };
-                // TODO: blocking progress bar
-
                 stockActivity.requestQueue.add(chartExportRequest);
             }
         });
@@ -437,6 +461,10 @@ public class CurrentStockFrag extends Fragment {
                         errorView.setVisibility(View.VISIBLE);
                     }
                 });
+        request.setRetryPolicy(
+                new DefaultRetryPolicy(5000,
+                DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                DefaultRetryPolicy.DEFAULT_BACKOFF_MULT));
         stockActivity.requestQueue.add(request);
     }
 }

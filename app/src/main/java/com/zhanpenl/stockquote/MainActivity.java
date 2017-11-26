@@ -155,19 +155,21 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         favListView.setAdapter(favListAdapter);
-        loadFavList();
         registerForContextMenu(favListView);
+        // TODO: uncomment it before demo
+        // loadFavList();
+        refreshFav();
 
         // refresh mechanism
         autoRefresh.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
                 if (isChecked) {
-                    Log.d("AUTOREFRESH", "timer starts");
+                    Log.d("AUTO_REFRESH", "timer starts");
                     refreshTimer.start();
                 }
                 else {
-                    Log.d("AUTOREFRESH", "timer stops");
+                    Log.d("AUTO_REFRESH", "timer stops");
                     refreshTimer.cancel();
                 }
             }
@@ -178,7 +180,6 @@ public class MainActivity extends AppCompatActivity {
                 refreshFav();
             }
         });
-
 
         // sort type Spinner
         final ArrayAdapter<String> sortCatAdapter = new ArrayAdapter<String>(this,
@@ -230,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         ascDescSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                isSortAsc = i == 1;
+                isSortAsc = i <= 1;
                 sortFavList();
             }
 
