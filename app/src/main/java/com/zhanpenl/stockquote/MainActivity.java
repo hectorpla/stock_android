@@ -38,6 +38,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.facebook.login.LoginManager;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -50,6 +51,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.logging.LogManager;
 
 public class MainActivity extends AppCompatActivity {
     AutoCompleteTextView autoTex;
@@ -64,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
     SharedPreferences sharedPref;
     final String makitonURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/autocomplete.php?search=";
+    final String refreshURL = "http://zhpnl-web571.us-west-1.elasticbeanstalk.com/stockQuote.php?realtime=true&symbol=";
 
     int sortType = 0;
     boolean isSortAsc = true;
@@ -157,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
         favListView.setAdapter(favListAdapter);
         registerForContextMenu(favListView);
         // TODO: uncomment it before demo
-        // loadFavList();
+        loadFavList();
         refreshFav();
 
         // refresh mechanism
@@ -318,6 +321,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         autoTex.setThreshold(1);
+
+        // facebook
+        LoginManager.getInstance().logOut();
     }
 
     /* internal methods  */
@@ -375,9 +381,10 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     double changePerLhs = extractChangePer(lhs);
                     double changePerRhs = extractChangePer(rhs);
+                    Log.d("SORT", "compare: " + changePerLhs + ", " + changePerRhs);
 
                     if (changePerLhs > changePerRhs) return 1;
-                    if (changePerLhs < changePerLhs) return -1;
+                    if (changePerLhs < changePerRhs) return -1;
                 }
                 catch (JSONException e) {
                     Log.d("FAV_LIST_SORT", "compare: " + e.toString());
@@ -422,14 +429,14 @@ public class MainActivity extends AppCompatActivity {
     private void refreshFav() {
         final int sz = sharedPref.getAll().size() - 1;
         int count = 0;
-        final String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?realtime=true&symbol=";
         final SharedPreferences.Editor editor = sharedPref.edit();
 
+        progressBar.setVisibility(View.VISIBLE);
         for (final String sym : sharedPref.getAll().keySet()) {
             if (sym.equals("count")) { continue; }
             count++;
             final int currentCount = count;
-            JsonObjectRequest refreshRequest = new JsonObjectRequest(url + sym, null,
+            JsonObjectRequest refreshRequest = new JsonObjectRequest(refreshURL + sym, null,
                     new Response.Listener<JSONObject>() {
                         @Override
                         public void onResponse(JSONObject response) {
@@ -455,6 +462,7 @@ public class MainActivity extends AppCompatActivity {
                             if (currentCount == sz) {
                                 // update list, notify change
                                 loadFavList();
+                                progressBar.setVisibility(View.GONE);
                             }
                         }
                     },
@@ -464,10 +472,11 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(getApplication(),
                                     "can't refresh info for " + sym,
                                     Toast.LENGTH_SHORT).show();
-                            Log.d("FAV_LIST_UPDATE", url + sym + ": "
+                            Log.d("FAV_LIST_UPDATE", refreshURL + sym + ": "
                                     + error.toString());
                             if (currentCount == sz) {
                                 loadFavList();
+                                progressBar.setVisibility(View.GONE);
                             }
                         }
                     }

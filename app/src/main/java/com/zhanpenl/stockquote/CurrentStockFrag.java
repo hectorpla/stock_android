@@ -320,7 +320,10 @@ public class CurrentStockFrag extends Fragment {
 
                         try {
                             int sz = sharedPref.getAll().size();
-                            if (sz <= 1) { editor.putInt("count", 0); }
+                            if (sz <= 1) {
+                                editor.putInt("count", 0);
+                                editor.commit();
+                            }
                             int count = sharedPref.getInt("count", 0);
 
                             editor.putInt("count", count + 1);
@@ -422,6 +425,7 @@ public class CurrentStockFrag extends Fragment {
 
     private void loadInfoTable() {
         // http://zhpnl-web571.us-west-1.elasticbeanstalk.com
+        // http://10.0.2.2/~hectorlueng/hw8/
         String url = "http://10.0.2.2/~hectorlueng/hw8/stockQuote.php?symbol=";
         url += symbol;
         Log.d("CURRENT", "loadInfoTable: " + url);
@@ -439,6 +443,8 @@ public class CurrentStockFrag extends Fragment {
                         try {
                             for (String field : fields) {
                                 String data = response.getString(field);
+                                if (field == "Stock Ticker") { field = "Stock Symbol"; }
+                                else if (field == "prevPrice") { field = "Close"; }
                                 rows.add(new String[] {field, data});
                             }
                         }
@@ -456,7 +462,7 @@ public class CurrentStockFrag extends Fragment {
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        errorView.setText(getResources().getString(R.string.cantLoadMsg));
+                        errorView.setText("Failed to stock details");
                         progressBar.setVisibility(View.GONE);
                         errorView.setVisibility(View.VISIBLE);
                     }
